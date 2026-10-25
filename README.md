@@ -1,4 +1,4 @@
-**# Cake Order Quotation Automation
+# Cake Order Quotation Automation
 
 ## Overview
 An AI-powered email automation workflow built with n8n to process customer cake orders and generate personalized quotations.
