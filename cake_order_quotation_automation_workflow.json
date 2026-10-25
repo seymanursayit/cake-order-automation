@@ -1,0 +1,319 @@
+{
+  "name": "cake_order_automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1008,
+        -32
+      ],
+      "id": "8f5b0691-57d8-4715-b99d-5aa2b9900c7f",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0q7WuCdt3BagzRrN",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.text}}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Sen bir pasta sipariş analiz asistanısın.\n\nMüşteri e-postasını analiz et ve aşağıdaki alanları çıkar:\n\n- is_cake_order (true veya false)\n- cake_count (adet)\n- cake_type (pasta türü)\n- total_price (toplam fiyat)\n\nKurallar:\n\n1. Eğer müşteri pasta siparişi vermiyorsa is_cake_order=false yaz.\n2. Eğer pasta siparişi veriyorsa is_cake_order=true yaz.\n3. cake_count alanına istenen pasta adedini yaz.\n4. cake_type alanına müşterinin istediği pasta türünü yaz.\n5. Toplam fiyatı her zaman cake_count × 1000 olarak hesapla.\n6. Matematiksel sonucu total_price alanına yaz.\n7. Eğer pasta türü belirtilmemişse cake_type alanına \"Belirtilmedi\" yaz.\n\nÖrnek:\n\n1 adet çilekli pasta → cake_count=1, cake_type=Çilekli Pasta, total_price=1000\n\n2 adet çikolatalı pasta → cake_count=2, cake_type=Çikolatalı Pasta, total_price=2000\n\n3 adet kestaneli pasta → cake_count=3, cake_type=Kestaneli Pasta, total_price=3000\n\nSadece belirtilen alanları doldur."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -800,
+        -32
+      ],
+      "id": "491783b7-2e54-41d7-a034-548cfe2a4c5d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        176
+      ],
+      "id": "76acef86-9d50-438b-99c1-430d110f8d80",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "PrIQUXS21tFhgedz",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"is_cake_order\": true,\n  \"cake_type\": \"Çilekli Pasta\",\n  \"cake_count\": 2,\n  \"total_price\": 2000\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -576,
+        176
+      ],
+      "id": "092419f9-ecdb-4745-bcd0-53e321646f42",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "driveId": "=myDrive",
+        "folderId": "=",
+        "title": "Pasta Teklifi"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        -32
+      ],
+      "id": "6c4d337d-c180-40e0-8132-9bf48f7c1baa",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "I0TkSU4DAn2frRnj",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{$json.id}}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=TİCARİ TEKLİF\n\nPasta Türü: {{$node[\"AI Agent\"].json[\"output\"][\"cake_type\"]}}\n\nPasta Sayısı: {{$node[\"AI Agent\"].json[\"output\"][\"cake_count\"]}}\n\nBirim Fiyat: 1000 TL\n\nToplam Fiyat: {{$node[\"AI Agent\"].json[\"output\"][\"cake_count\"] * 1000}} TL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -32
+      ],
+      "id": "90cbc2bc-5743-4ddc-85cd-2147f16a6627",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "I0TkSU4DAn2frRnj",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$node[\"Gmail Trigger\"].json[\"From\"]}}",
+        "subject": "Pasta Teklifiniz Hazır",
+        "message": "=Merhaba,\n\nTalebiniz alınmıştır.\n\nÜrün: {{$node[\"AI Agent\"].json[\"output\"][\"cake_type\"]}}\n\nAdet: {{$node[\"AI Agent\"].json[\"output\"][\"cake_count\"]}}\n\nBirim Fiyat: 1000 TL\n\nToplam Fiyat: {{$node[\"AI Agent\"].json[\"output\"][\"total_price\"]}} TL\n\nTeklif Dokümanı:\nhttps://docs.google.com/document/d/{{$node[\"Update a document\"].json[\"documentId\"]}}/edit\n\nİyi günler dileriz.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        -32
+      ],
+      "id": "0a2f6f74-1d00-4d3a-8ecd-1da4a4ea5996",
+      "name": "Send a message",
+      "webhookId": "42b30137-2fd1-441c-8781-0df60ba2039a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0q7WuCdt3BagzRrN",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$node[\"Update a document\"].json[\"documentId\"]}}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone",
+            "allowFileDiscovery": true
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        112,
+        -32
+      ],
+      "id": "c83f2885-160f-4c35-bea4-ad772dd36c33",
+      "name": "Share file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "2uzNoj4nV5pwF7ic",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0ea166ba-cc5f-47e5-b317-a9db5fe6d5a5",
+              "leftValue": "={{$json.is_cake_order}}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -512,
+        -32
+      ],
+      "id": "a556c828-7da8-48ca-8071-3fe110dcd5e3",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e67c2cf9-f75f-447e-a967-bb2af3f4ec90",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e5a854108485477f67052b69fd0e435ddbaa2b7652bf2653989467cb2bf5d446"
+  },
+  "nodeGroups": [],
+  "id": "Qp11gGkzYiXgMBt5",
+  "tags": []
+}
