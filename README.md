@@ -41,3 +41,11 @@ Each cake costs 1,000 TRY.
 Created as part of the GoIT AI Automation training program.
 
 **Note:** Credentials and API keys should never be shared publicly.**
+
+
+## Deliverables
+
+- **Workflow JSON:** `cake_order_quotation_automation_workflow.json`
+- **Quotation Template:** [Open Google Docs Template](https://docs.google.com/document/d/1Vr0Zd99QvUxvVN62EqPKS6BaG5isQltUA8AOll0ffdE/edit?usp=sharing)
+- **Sample Quotation:** [Open Generated Quotation](https://docs.google.com/document/d/1TTyyDQMkTadcUZFQSyiXiJMdChNqcU64hT0zMDfeaSo/edit?usp=sharing)
+- **Workflow Screenshot:** `cake_order_n8n.png`
